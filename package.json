@@ -1,0 +1,14 @@
+{
+  "name": "phone-web-remote",
+  "version": "1.0.0",
+  "description": "手机网页遥控器 — 用手机浏览器当 Mac 的触控板/宏键盘/语音输入(WiFi 局域网)",
+  "main": "server.js",
+  "license": "MIT",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0",
+    "@nut-tree-fork/nut-js": "^4.2.0"
+  }
+}
