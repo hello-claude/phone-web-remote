@@ -6,8 +6,7 @@
 ## 安装
 
 ```bash
-git clone https://github.com/hello-claude/phone-web-remote.git
-cd phone-web-remote
+cd 代码/进行项目/手机遥控器
 npm install
 ```
 
@@ -30,13 +29,20 @@ npm start
 
 手机连同一个 WiFi,浏览器打开那个网址,输入 PIN,即可使用。
 
-## 首次必做:授权「辅助功能」
+## 平台支持
+
+服务端可跑在 **macOS 或 Windows**(手机端始终只是浏览器,无所谓系统)。中文/emoji 等非 ASCII
+通过「写系统剪贴板 + 模拟粘贴」注入:macOS 用 `pbcopy` + ⌘V,Windows 用 PowerShell `Set-Clipboard` + Ctrl+V。
+
+## 首次必做(仅 macOS):授权「辅助功能」
 
 macOS 不允许程序随便模拟键鼠。第一次注入会失败,需要:
 
 **系统设置 → 隐私与安全性 → 辅助功能** → 打开开关,勾选**运行本程序的那个程序**
 (在 Terminal 里跑就勾 Terminal;在 VSCode 集成终端里跑就勾 Visual Studio Code;
 也可能需要勾 `node`)。勾完重启 `npm start`。
+
+> **Windows** 一般无需此授权;少数应用以管理员权限运行时,需让本服务端也以管理员身份启动才能注入。
 
 ## 界面(横屏)
 
@@ -84,7 +90,3 @@ macOS 不允许程序随便模拟键鼠。第一次注入会失败,需要:
 ## 端口
 
 默认 `8765`,可用环境变量改:`PORT=9000 npm start`。
-
-## 许可证
-
-[MIT](LICENSE) © 2026 hello-claude。可自由使用、修改、分发,保留版权声明即可。
