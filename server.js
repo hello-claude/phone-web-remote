@@ -8,6 +8,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { execFile } = require('child_process');
 const { WebSocketServer } = require('ws');
 const { mouse, keyboard, Key, Button, Point } = require('@nut-tree-fork/nut-js');
 
@@ -32,6 +33,44 @@ const KEY_MAP = {
   Tab: Key.Tab,
   Backspace: Key.Backspace,
 };
+
+// ---------- 文本注入(Unicode 安全)----------
+// nut.js 的 keyboard.type() 模拟物理键位,打不出中文/emoji 等非 ASCII 字符(无对应键位)。
+// 解决:纯 ASCII 仍走 keyboard.type()(快、不动剪贴板);含非 ASCII → 写系统剪贴板 + 模拟 Cmd+V 粘贴,
+// 粘贴后再把旧剪贴板还原(尽力而为)。仅 macOS(pbcopy/pbpaste)。
+function pbcopy(text) {
+  return new Promise((resolve, reject) => {
+    const p = execFile('pbcopy', (err) => (err ? reject(err) : resolve()));
+    p.stdin.end(text, 'utf8');
+  });
+}
+function pbpaste() {
+  return new Promise((resolve, reject) => {
+    execFile('pbpaste', { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 },
+      (err, out) => (err ? reject(err) : resolve(out)));
+  });
+}
+async function injectText(text) {
+  // 纯 ASCII(含控制字符):物理按键直接打,跟手且不污染剪贴板
+  if (/^[\x00-\x7F]*$/.test(text)) {
+    await keyboard.type(text);
+    return;
+  }
+  // 含中文/emoji 等:剪贴板 + Cmd+V
+  let prev = null;
+  try { prev = await pbpaste(); } catch (e) { /* 读不到旧剪贴板就不还原 */ }
+  await pbcopy(text);
+  // ⚠ 经实测:darwin 原生二进制只认 "meta"(=Key.LeftSuper=⌘),不认 "cmd"(=Key.LeftCmd)。
+  // 勿"好心"改成 Key.LeftCmd,否则 ⌘ 按不下、粘贴失效。
+  await keyboard.pressKey(Key.LeftSuper);
+  await keyboard.pressKey(Key.V);
+  await keyboard.releaseKey(Key.V);
+  await keyboard.releaseKey(Key.LeftSuper);
+  // 还原旧剪贴板:延后到粘贴消费完之后(尽力而为,失败静默)
+  if (prev !== null) {
+    setTimeout(() => { pbcopy(prev).catch(() => {}); }, 300);
+  }
+}
 
 // ---------- 宏配置读写 ----------
 function loadConfig() {
@@ -173,7 +212,7 @@ wss.on('connection', (ws, req) => {
         }
         case 'type':
           if (typeof msg.text === 'string' && msg.text.length) {
-            await keyboard.type(msg.text);
+            await injectText(msg.text);
           }
           break;
         case 'key': {
