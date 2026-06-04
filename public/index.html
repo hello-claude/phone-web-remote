@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>手机遥控器</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #1a1d24;
+    --btn: #262b34;
+    --btn-active: #3a4150;
+    --accent: #4c8bf5;
+    --text: #e6e9ef;
+    --muted: #8b93a3;
+    --gap: 8px;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; height: 100%; width: 100%;
+    overflow: hidden; touch-action: none;
+    user-select: none; -webkit-user-select: none;
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, system-ui, "PingFang SC", sans-serif;
+    overscroll-behavior: none;
+  }
+
+  /* 竖屏提示 */
+  #rotate {
+    display: none;
+    position: fixed; inset: 0; z-index: 30;
+    background: var(--bg); color: var(--muted);
+    align-items: center; justify-content: center;
+    text-align: center; font-size: 18px; padding: 24px;
+  }
+  @media (orientation: portrait) {
+    #rotate { display: flex; }
+    #app { display: none; }
+  }
+
+  /* PIN 配对层 */
+  #overlay {
+    position: fixed; inset: 0; z-index: 20;
+    background: rgba(15,17,21,0.97);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 16px;
+  }
+  #overlay h1 { font-size: 20px; margin: 0; }
+  #overlay .hint { color: var(--muted); font-size: 13px; }
+  #pinInput {
+    width: 160px; font-size: 28px; text-align: center; letter-spacing: 8px;
+    padding: 10px; border-radius: 10px; border: 1px solid #333;
+    background: var(--panel); color: var(--text);
+  }
+  #overlay button {
+    background: var(--accent); color: #fff; border: 0;
+    padding: 12px 28px; border-radius: 10px; font-size: 16px;
+  }
+  #pinErr { color: #ff6b6b; font-size: 13px; min-height: 16px; }
+
+  /* 主界面:左=控制面板,右=触控板 */
+  #app { display: flex; height: 100%; width: 100%; padding: var(--gap); gap: var(--gap); }
+  #panel { width: 44%; display: flex; flex-direction: column; gap: var(--gap); }
+  #pad {
+    flex: 1; background: var(--panel); border-radius: 14px;
+    position: relative; touch-action: none; overflow: hidden;
+  }
+  #padHint {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    color: var(--muted); font-size: 14px; pointer-events: none; text-align: center; padding: 12px;
+  }
+
+  /* 宏按钮网格 */
+  #macros {
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--gap);
+    flex: 1.4;
+  }
+  .macro {
+    background: var(--btn); border: 0; border-radius: 10px; color: var(--text);
+    font-size: 14px; display: flex; align-items: center; justify-content: center;
+    text-align: center; padding: 4px; overflow: hidden; word-break: break-all;
+  }
+  .macro:active { background: var(--btn-active); }
+
+  /* 方向键 + 语音 */
+  #nav { display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: 1fr 1fr; gap: var(--gap); flex: 1; }
+  .key {
+    background: var(--btn); border: 0; border-radius: 10px; color: var(--text);
+    font-size: 20px; display: flex; align-items: center; justify-content: center;
+  }
+  .key:active { background: var(--btn-active); }
+  .key.accent { background: #2c3a52; }
+  .key.accent:active { background: var(--accent); }
+  #kUp { grid-column: 2; grid-row: 1; }
+  #kLeft { grid-column: 1; grid-row: 2; }
+  #kDown { grid-column: 2; grid-row: 2; }
+  #kRight { grid-column: 3; grid-row: 2; }
+  #kEnter { grid-column: 3; grid-row: 1; }
+  #kVoice { grid-column: 4; grid-row: 1 / span 2; font-size: 24px; }
+
+  /* 左键 / 右键 实体按钮 */
+  #clicks { display: flex; gap: var(--gap); flex: 0.6; }
+  .clickbtn {
+    flex: 1; background: var(--btn); border: 0; border-radius: 10px; color: var(--text);
+    font-size: 17px; display: flex; align-items: center; justify-content: center;
+  }
+  .clickbtn:active { background: var(--accent); }
+  .clickbtn.held { background: var(--accent); } /* 左键按住保持时高亮(拖拽中)*/
+
+  /* 文字/语音输入栏 */
+  #inputBar { display: flex; gap: var(--gap); }
+  #textIn {
+    flex: 1; background: var(--panel); border: 1px solid #333; border-radius: 10px;
+    color: var(--text); font-size: 16px; padding: 10px;
+  }
+  #sendBtn {
+    background: var(--accent); color: #fff; border: 0; border-radius: 10px;
+    padding: 0 18px; font-size: 15px;
+  }
+
+  /* 顶部错误提示 */
+  #toast {
+    position: fixed; top: 8px; left: 50%; transform: translateX(-50%);
+    background: #ff6b6b; color: #fff; padding: 6px 14px; border-radius: 8px;
+    font-size: 13px; z-index: 25; display: none; max-width: 80%;
+  }
+</style>
+</head>
+<body>
+
+<div id="rotate">请把手机横过来使用 🔄</div>
+<div id="toast"></div>
+
+<div id="overlay">
+  <h1>手机遥控器</h1>
+  <div class="hint">输入 Mac 终端里显示的 4 位 PIN</div>
+  <input id="pinInput" inputmode="numeric" maxlength="4" placeholder="····">
+  <button id="connectBtn">连接</button>
+  <div id="pinErr"></div>
+</div>
+
+<div id="app">
+  <div id="panel">
+    <div id="macros"></div>
+    <div id="nav">
+      <button class="key" id="kUp" data-key="Up">↑</button>
+      <button class="key accent" id="kEnter" data-key="Enter">↵</button>
+      <button class="key" id="kVoice">🎤</button>
+      <button class="key" id="kLeft" data-key="Left">←</button>
+      <button class="key" id="kDown" data-key="Down">↓</button>
+      <button class="key" id="kRight" data-key="Right">→</button>
+    </div>
+    <div id="clicks">
+      <button class="clickbtn" id="btnLeft">左键 · 按住拖</button>
+      <button class="clickbtn" id="btnRight">右键</button>
+    </div>
+    <div id="inputBar">
+      <input id="textIn" type="text" placeholder="点🎤说话或在此打字…" autocomplete="off" autocorrect="off" autocapitalize="off">
+      <button id="sendBtn">发送</button>
+    </div>
+  </div>
+  <div id="pad"><div id="padHint">在此滑动 = 移光标 · 轻点 = 左键<br>双指轻点 = 右键 · 双指滑 = 滚动</div></div>
+</div>
+
+<script>
+'use strict';
+(function () {
+  // ---------- 连接 ----------
+  var ws = null;
+  var pin = localStorage.getItem('rc_pin') || '';
+  var connected = false;
+
+  var overlay = document.getElementById('overlay');
+  var pinInput = document.getElementById('pinInput');
+  var pinErr = document.getElementById('pinErr');
+  var toastEl = document.getElementById('toast');
+  var toastTimer = null;
+
+  function toast(msg) {
+    toastEl.textContent = msg;
+    toastEl.style.display = 'block';
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.style.display = 'none'; }, 2500);
+  }
+
+  function send(obj) {
+    if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj));
+  }
+
+  function connect() {
+    ws = new WebSocket('ws://' + location.host);
+    ws.onopen = function () {
+      if (pin) ws.send(JSON.stringify({ type: 'auth', pin: pin }));
+    };
+    ws.onmessage = function (ev) {
+      var m;
+      try { m = JSON.parse(ev.data); } catch (e) { return; }
+      if (m.type === 'authOk') {
+        connected = true;
+        localStorage.setItem('rc_pin', pin);
+        overlay.style.display = 'none';
+      } else if (m.type === 'authFail') {
+        connected = false;
+        localStorage.removeItem('rc_pin');
+        overlay.style.display = 'flex';
+        pinErr.textContent = 'PIN 错误,请重输';
+      } else if (m.type === 'macros') {
+        renderMacros(m.list || []);
+      } else if (m.type === 'error') {
+        toast('Mac 端出错:' + m.message);
+      }
+    };
+    ws.onclose = function () {
+      connected = false;
+      setTimeout(connect, 1000); // 断线自动重连
+    };
+    ws.onerror = function () { try { ws.close(); } catch (e) {} };
+  }
+
+  document.getElementById('connectBtn').addEventListener('click', function () {
+    pin = pinInput.value.trim();
+    pinErr.textContent = '';
+    if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'auth', pin: pin }));
+    else connect();
+  });
+  pinInput.addEventListener('keyup', function (e) {
+    if (e.key === 'Enter') document.getElementById('connectBtn').click();
+  });
+
+  // ---------- 宏按钮 ----------
+  var macrosEl = document.getElementById('macros');
+  var macros = [];
+  var SLOTS = 6; // 固定 6 个槽位(3列x2行)
+
+  function renderMacros(list) {
+    macros = list;
+    macrosEl.innerHTML = '';
+    for (var i = 0; i < SLOTS; i++) {
+      (function (idx) {
+        var m = macros[idx] || { label: '＋', payload: '' };
+        var btn = document.createElement('button');
+        btn.className = 'macro';
+        btn.textContent = m.label || '＋';
+        var pressTimer = null;
+        var longPressed = false;
+
+        btn.addEventListener('touchstart', function (e) {
+          e.preventDefault();
+          longPressed = false;
+          pressTimer = setTimeout(function () {
+            longPressed = true;
+            editMacro(idx);
+          }, 600); // 长按 600ms = 编辑
+        }, { passive: false });
+
+        btn.addEventListener('touchend', function (e) {
+          e.preventDefault();
+          if (pressTimer) clearTimeout(pressTimer);
+          if (longPressed) return; // 长按已进入编辑,不发送
+          var cur = macros[idx];
+          if (cur && cur.payload) send({ type: 'type', text: cur.payload });
+          else editMacro(idx); // 空槽位点按 = 直接编辑
+        }, { passive: false });
+
+        btn.addEventListener('touchcancel', function () {
+          if (pressTimer) clearTimeout(pressTimer);
+          longPressed = false; // 不依赖下次 touchstart 才复位
+        });
+
+        macrosEl.appendChild(btn);
+      })(i);
+    }
+  }
+
+  function editMacro(idx) {
+    var cur = macros[idx] || { label: '', payload: '' };
+    var label = window.prompt('按钮显示名:', cur.label || '');
+    if (label === null) return;
+    var payload = window.prompt('按下发送的内容:', cur.payload || '');
+    if (payload === null) return;
+    send({ type: 'setMacro', index: idx, label: label, payload: payload });
+  }
+
+  // ---------- 方向键 / 回车 ----------
+  var navKeys = document.querySelectorAll('.key[data-key]');
+  navKeys.forEach(function (btn) {
+    btn.addEventListener('touchstart', function (e) {
+      e.preventDefault();
+      send({ type: 'key', key: btn.getAttribute('data-key') });
+    }, { passive: false });
+  });
+
+  // ---------- 左键 / 右键 实体按钮 ----------
+  // 右键:点一下 = 单次右键
+  document.getElementById('btnRight').addEventListener('touchstart', function (e) {
+    e.preventDefault();
+    send({ type: 'click', button: 'right' });
+  }, { passive: false });
+
+  // 左键:按住不放 = 左键按下并保持(配合触控板移动 = 拖拽);松开 = 抬起。
+  // 快速一按 = 按下+立刻抬起 = 普通左键单击。
+  (function () {
+    var btn = document.getElementById('btnLeft');
+    var down = false;
+    function press(e) {
+      e.preventDefault();
+      if (down) return;
+      down = true;
+      btn.classList.add('held');
+      send({ type: 'mousedown', button: 'left' });
+    }
+    function release() {
+      if (!down) return;
+      down = false;
+      btn.classList.remove('held');
+      send({ type: 'mouseup', button: 'left' });
+    }
+    btn.addEventListener('touchstart', press, { passive: false });
+    btn.addEventListener('touchend', function (e) { e.preventDefault(); release(); }, { passive: false });
+    btn.addEventListener('touchcancel', release); // 手指滑出/被打断也确保抬起,避免左键卡住
+  })();
+
+  // ---------- 语音 / 文字输入 ----------
+  var textIn = document.getElementById('textIn');
+  document.getElementById('kVoice').addEventListener('touchstart', function (e) {
+    e.preventDefault();
+    textIn.focus(); // 唤起手机键盘,用户点键盘上的麦克风听写
+  }, { passive: false });
+
+  function sendText() {
+    var t = textIn.value;
+    if (t.length) send({ type: 'type', text: t });
+    textIn.value = '';
+    textIn.blur();
+  }
+  document.getElementById('sendBtn').addEventListener('click', sendText);
+  textIn.addEventListener('keyup', function (e) {
+    if (e.key === 'Enter') sendText();
+  });
+
+  // ---------- 触控板 ----------
+  var pad = document.getElementById('pad');
+  var padHint = document.getElementById('padHint');
+  var tracking = false;     // 触控板上是否有手指
+  var trackId = null;       // 当前跟踪的手指 identifier(始终基于同一根指算位移)
+  var lastX = 0, lastY = 0; // 跟踪手指上一帧位置
+  var startX = 0, startY = 0, startT = 0, moved = false, maxFingers = 0;
+
+  function findTouch(list, id) {
+    for (var i = 0; i < list.length; i++) if (list[i].identifier === id) return list[i];
+    return null;
+  }
+  var accDx = 0, accDy = 0, accScroll = 0;
+  var rafQueued = false;
+  var SENS = 2.8;          // 移动灵敏度(越大光标走越快)
+  var SCROLL_DIV = 6;      // 滚动衰减(越大越慢)
+  var TAP_MOVE = 8;        // 判定为"点按"的最大位移(px)
+  var TAP_TIME = 250;      // 判定为"点按"的最大时长(ms)
+
+  function flush() {
+    rafQueued = false;
+    if (accDx || accDy) {
+      send({ type: 'move', dx: accDx, dy: accDy });
+      accDx = 0; accDy = 0;
+    }
+    if (Math.abs(accScroll) >= 1) {
+      send({ type: 'scroll', dy: Math.round(accScroll) });
+      accScroll = 0;
+    }
+  }
+  function queueFlush() {
+    if (!rafQueued) { rafQueued = true; requestAnimationFrame(flush); }
+  }
+
+  pad.addEventListener('touchstart', function (e) {
+    e.preventDefault();
+    padHint.style.display = 'none';
+    maxFingers = Math.max(maxFingers, e.targetTouches.length);
+    if (!tracking) {
+      // 本次手势的第一根手指落下
+      tracking = true;
+      var t = e.targetTouches[0];
+      trackId = t.identifier;
+      lastX = t.clientX; lastY = t.clientY;
+      startX = t.clientX; startY = t.clientY;
+      startT = Date.now();
+      moved = false;
+      maxFingers = e.targetTouches.length;
+    } else {
+      // 已在跟踪中又加手指:把基准重定到当前跟踪指,避免位移跳变
+      var tt = findTouch(e.targetTouches, trackId) || e.targetTouches[0];
+      trackId = tt.identifier;
+      lastX = tt.clientX; lastY = tt.clientY;
+    }
+  }, { passive: false });
+
+  pad.addEventListener('touchmove', function (e) {
+    e.preventDefault();
+    var t = findTouch(e.targetTouches, trackId);
+    if (!t) { // 跟踪指丢失,改跟第一根并重置基准(不计入这一帧位移)
+      t = e.targetTouches[0];
+      if (t) { trackId = t.identifier; lastX = t.clientX; lastY = t.clientY; }
+      return;
+    }
+    var dx = t.clientX - lastX;
+    var dy = t.clientY - lastY;
+    lastX = t.clientX; lastY = t.clientY;
+    if (Math.abs(t.clientX - startX) > TAP_MOVE || Math.abs(t.clientY - startY) > TAP_MOVE) moved = true;
+    if (e.targetTouches.length >= 2) {
+      accScroll += dy / SCROLL_DIV; // 双指 = 滚动
+    } else {
+      accDx += dx * SENS;
+      accDy += dy * SENS;
+    }
+    queueFlush();
+  }, { passive: false });
+
+  pad.addEventListener('touchend', function (e) {
+    e.preventDefault();
+    if (e.targetTouches.length === 0) {
+      // 所有手指都抬起 → 结算本次手势
+      var dt = Date.now() - startT;
+      if (!moved && dt < TAP_TIME) {
+        // 快速、几乎没移动 → 点按;整段手势出现过 ≥2 指即右键
+        send({ type: 'click', button: maxFingers >= 2 ? 'right' : 'left' });
+      }
+      tracking = false; trackId = null; maxFingers = 0;
+    } else {
+      // 还有手指在板上:把基准重定到剩余的某根,避免松一指时光标跳
+      var rt = findTouch(e.targetTouches, trackId) || e.targetTouches[0];
+      trackId = rt.identifier;
+      lastX = rt.clientX; lastY = rt.clientY;
+    }
+  }, { passive: false });
+
+  pad.addEventListener('touchcancel', function () {
+    accDx = 0; accDy = 0; accScroll = 0;
+    tracking = false; trackId = null; maxFingers = 0; moved = true;
+  }, { passive: false });
+
+  // 阻止整页缩放/双击
+  document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+  document.addEventListener('dblclick', function (e) { e.preventDefault(); });
+
+  // ---------- 启动 ----------
+  if (pin) pinInput.value = pin;
+  connect();
+})();
+</script>
+</body>
+</html>
