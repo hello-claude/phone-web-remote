@@ -93,6 +93,7 @@
   .key:active { background: var(--btn-active); }
   .key.accent { background: #2c3a52; }
   .key.accent:active { background: var(--accent); }
+  #kBack { grid-column: 1; grid-row: 1; }
   #kUp { grid-column: 2; grid-row: 1; }
   #kLeft { grid-column: 1; grid-row: 2; }
   #kDown { grid-column: 2; grid-row: 2; }
@@ -145,6 +146,7 @@
   <div id="panel">
     <div id="macros"></div>
     <div id="nav">
+      <button class="key" id="kBack" data-key="Backspace">⌫</button>
       <button class="key" id="kUp" data-key="Up">↑</button>
       <button class="key accent" id="kEnter" data-key="Enter">↵</button>
       <button class="key" id="kVoice">🎤</button>
