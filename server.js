@@ -51,13 +51,15 @@ function clipCopy(text) {
     });
   }
   if (PLATFORM === 'win32') {
-    // 经 stdin 喂给 PowerShell;先把输入编码设为 UTF-8 再 ReadToEnd,避免中文乱码
+    // ⚠ 不能用 stdin 管道喂中文:PowerShell 5.1 的 [Console]::In.ReadToEnd() 读管道会按默认代码页(GBK)
+    //   解码 UTF-8 字节 → 中文变 "?"(已在真机实测坐实)。改为把文本 base64 后作命令参数,在 PS 内还原成
+    //   UTF-8,彻底绕开管道/控制台编码。base64 字母表仅 [A-Za-z0-9+/=],塞进单引号无注入风险。
+    const b64 = Buffer.from(text, 'utf8').toString('base64');
     return new Promise((resolve, reject) => {
       // -STA:剪贴板 OLE 需单线程套间;PowerShell 5.1 默认 STA,显式钉死以免 apartment 报错
-      const p = execFile('powershell', ['-NoProfile', '-NonInteractive', '-STA', '-Command',
-        '[Console]::InputEncoding=[System.Text.Encoding]::UTF8; Set-Clipboard -Value ([Console]::In.ReadToEnd())'],
+      execFile('powershell', ['-NoProfile', '-NonInteractive', '-STA', '-Command',
+        `Set-Clipboard -Value ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String('${b64}')))`],
         (err) => (err ? reject(err) : resolve()));
-      p.stdin.end(text, 'utf8');
     });
   }
   return Promise.reject(new Error(`中文输入暂不支持该平台: ${PLATFORM}(仅 macOS / Windows)`));
@@ -72,11 +74,16 @@ function clipPaste() {
     });
   }
   if (PLATFORM === 'win32') {
+    // 同理,PS 标准输出回传中文也会丢编码 → 让 PS 输出 base64(纯 ASCII),Node 端再解回 UTF-8。
     return new Promise((resolve, reject) => {
       execFile('powershell', ['-NoProfile', '-NonInteractive', '-STA', '-Command',
-        '[Console]::OutputEncoding=[System.Text.Encoding]::UTF8; $t=Get-Clipboard -Raw; if($null -ne $t){[Console]::Out.Write($t)}'],
+        '$t=Get-Clipboard -Raw; if($null -ne $t){[System.Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($t))}'],
         { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 },
-        (err, out) => (err ? reject(err) : resolve(out)));
+        (err, out) => {
+          if (err) return reject(err);
+          const s = (out || '').trim();
+          resolve(s ? Buffer.from(s, 'base64').toString('utf8') : '');
+        });
     });
   }
   return Promise.reject(new Error(`unsupported platform: ${PLATFORM}`));
