@@ -1,9 +1,11 @@
-# 手机遥控器
+# Phone Web Remote
 
-用**手机浏览器**当 Mac 的遥控器:触控板 + 自定义宏按钮 + 方向键/回车 + 语音输入。
-走 **WiFi 局域网**(不是蓝牙),iOS / 安卓都能用,**手机端不用装 App**。
+Turn your **phone's browser** into a remote for your Mac / Windows PC: trackpad + custom macro buttons + arrow keys / Enter + voice input.
+Runs over **Wi-Fi LAN** (not Bluetooth), works on iOS / Android, **nothing to install on the phone**.
 
-## 安装
+> **Languages:** English | [中文](README.zh-CN.md)
+
+## Install
 
 ```bash
 git clone https://github.com/hello-claude/phone-web-remote.git
@@ -11,83 +13,92 @@ cd phone-web-remote
 npm install
 ```
 
-> `npm install` 会装 `@nut-tree-fork/nut-js`(原生键鼠模拟模块)。若它装不上(报编译错),
-> 见文末「nut.js 装不上怎么办」。
+> `npm install` pulls in `@nut-tree-fork/nut-js` (a native mouse/keyboard module). If it fails to build,
+> see "If nut.js won't install" at the bottom.
 
-## 运行
+## Run
 
 ```bash
 npm start
 ```
 
-终端会打印类似:
+The terminal prints something like:
 
 ```
-配对 PIN(每次启动都会变): 7421
-手机浏览器打开下面任一网址(手机要和 Mac 在同一 WiFi):
+Pairing PIN (changes on every launch): 7421
+Open one of these URLs in your phone's browser (phone must be on the same Wi-Fi as the host):
    http://192.168.1.23:8765
 ```
 
-手机连同一个 WiFi,浏览器打开那个网址,输入 PIN,即可使用。
+Join the same Wi-Fi on your phone, open that URL in the browser, enter the PIN, and you're in.
 
-## 平台支持
+## Platform support
 
-服务端可跑在 **macOS 或 Windows**(手机端始终只是浏览器,无所谓系统)。中文/emoji 等非 ASCII
-通过「写系统剪贴板 + 模拟粘贴」注入:macOS 用 `pbcopy` + ⌘V,Windows 用 PowerShell `Set-Clipboard` + Ctrl+V。
+The server runs on **macOS or Windows** (the phone side is always just a browser, OS-agnostic). Non-ASCII text
+(Chinese / emoji, etc.) is injected via "write to the system clipboard + simulate paste": macOS uses `pbcopy` + ⌘V,
+Windows uses PowerShell `Set-Clipboard` + Ctrl+V.
 
-## 首次必做(仅 macOS):授权「辅助功能」
+## First-time setup (macOS only): grant Accessibility
 
-macOS 不允许程序随便模拟键鼠。第一次注入会失败,需要:
+macOS won't let a program simulate the keyboard/mouse by default. The first injection fails until you:
 
-**系统设置 → 隐私与安全性 → 辅助功能** → 打开开关,勾选**运行本程序的那个程序**
-(在 Terminal 里跑就勾 Terminal;在 VSCode 集成终端里跑就勾 Visual Studio Code;
-也可能需要勾 `node`)。勾完重启 `npm start`。
+**System Settings → Privacy & Security → Accessibility** → turn it on and tick **the program that runs this server**
+(running in Terminal → tick Terminal; in the VSCode integrated terminal → tick Visual Studio Code; you may also
+need to tick `node`). Then restart `npm start`.
 
-> **Windows** 一般无需此授权;少数应用以管理员权限运行时,需让本服务端也以管理员身份启动才能注入。
+> **Windows** generally needs no such grant; for the rare app running elevated, start this server as Administrator too.
 
-## 界面(横屏)
+## Interface (landscape)
 
 ```
 ┌───────────────────────────┬──────────────────────────────┐
-│ [/compact][/clear][继续]  │                              │
-│ [/review][是 y][否 n]     │                              │
-├───────────────────────────┤        触控板区               │
-│  [↑] [↵] [🎤]             │   滑动移光标 · 轻点左键        │
-│  [←][↓][→]                │   双指轻点右键 · 双指滑滚动     │
+│ [/compact][/clear][cont.] │                              │
+│ [/review][yes y][no n]    │                              │
+├───────────────────────────┤         Trackpad area        │
+│  [⌫][↑] [↵] [🎤]          │   slide = move · tap = left  │
+│  [←][↓][→]                │  two-finger tap = right ·    │
+│                           │  two-finger slide = scroll   │
 ├───────────────────────────┤                              │
-│ [文字/语音输入栏] [发送]   │                              │
+│ [text / voice input][send]│                              │
 └───────────────────────────┴──────────────────────────────┘
-        左:键盘面板                    右:触控板(右手)
+      Left: keyboard panel            Right: trackpad (right hand)
 ```
 
-- **宏按钮**:点一下把预设文字打进 Mac 当前焦点输入框。**长按某个按钮**可改它的显示名和发送内容(改动存到 `config.json`,所有连接的手机同步)。空槽点一下也能新建。
-- **方向键 / ↵**:快速选 Claude 弹出的选项。
-- **🎤 语音**:点一下唤起手机键盘,再点键盘上的麦克风说话(iOS 调 Siri 听写、安卓调输入法听写),识别出的字会进输入栏,点「发送」打到 Mac。也可直接在栏里打字。
+- **Macro buttons**: tap to type the preset text into whatever field is focused on the Mac/PC. **Long-press a button**
+  to edit its label and payload (saved to `config.json`, synced to every connected phone). Tapping an empty slot creates one.
+- **Arrow keys / ↵**: quickly pick options from Claude's prompts.
+- **⌫ Delete**: backspace (delete the character to the left).
+- **🎤 Voice**: tap to bring up the phone keyboard, then tap its microphone to dictate (iOS uses Siri dictation,
+  Android uses the IME's). The recognized text lands in the input bar; tap "send" to type it on the Mac/PC. You can also just type in the bar.
 
-## 默认宏按钮
+## Default macro buttons
 
-见 `config.json`,可直接编辑(或在手机上长按编辑):
+See `config.json`; edit directly (or long-press to edit on the phone):
 
-| 显示名 | 发送内容 |
+| Label | Payload |
 |---|---|
 | /compact | /compact |
 | /clear | /clear |
-| 继续 | 继续 |
+| 继续 (continue) | 继续 |
 | /review | /review |
-| 是 y | y |
-| 否 n | n |
+| 是 y (yes) | y |
+| 否 n (no) | n |
 
-## 安全
+## Security
 
-- 局域网内需输 **4 位 PIN** 才能控制(每次启动随机生成,打印在终端)。请只在可信 WiFi 下使用。
+- Control requires a **4-digit PIN** on the LAN (randomly generated each launch, printed to the terminal). Use only on trusted Wi-Fi.
 
-## nut.js 装不上怎么办(回退方案)
+## If nut.js won't install (fallback)
 
-`@nut-tree-fork/nut-js` 是原生模块,个别环境编译失败。回退做法:
+`@nut-tree-fork/nut-js` is a native module and fails to build in some environments. Fallback (macOS):
 1. `brew install cliclick`
-2. 把 `server.js` 里的键鼠注入改为 shell 调用 `cliclick`(鼠标/按键)和 `osascript`(打字)。
-   (这是次选方案;触控板连续移动用 cliclick 会有子进程开销、偏卡,优先修好 nut.js。)
+2. Replace the mouse/keyboard injection in `server.js` with shell calls to `cliclick` (mouse/keys) and `osascript` (typing).
+   (This is the second choice; continuous trackpad movement via cliclick has per-call subprocess overhead and feels laggy — fix nut.js first.)
 
-## 端口
+## Port
 
-默认 `8765`,可用环境变量改:`PORT=9000 npm start`。
+Defaults to `8765`; override with an env var: `PORT=9000 npm start`.
+
+## License
+
+[MIT](LICENSE) © 2026 hello-claude.
