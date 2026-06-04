@@ -1,0 +1,28 @@
+{
+  "macros": [
+    {
+      "label": "/compact",
+      "payload": "/compact"
+    },
+    {
+      "label": "/clear",
+      "payload": "/clear"
+    },
+    {
+      "label": "继续",
+      "payload": "继续"
+    },
+    {
+      "label": "/review",
+      "payload": "/review"
+    },
+    {
+      "label": "是 y",
+      "payload": "y"
+    },
+    {
+      "label": "否 n",
+      "payload": "n"
+    }
+  ]
+}
