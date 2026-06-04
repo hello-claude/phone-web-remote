@@ -6,7 +6,8 @@
 ## 安装
 
 ```bash
-cd 代码/进行项目/手机遥控器
+git clone https://github.com/hello-claude/phone-web-remote.git
+cd phone-web-remote
 npm install
 ```
 
