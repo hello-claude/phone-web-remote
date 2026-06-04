@@ -34,41 +34,75 @@ const KEY_MAP = {
   Backspace: Key.Backspace,
 };
 
-// ---------- 文本注入(Unicode 安全)----------
+// ---------- 文本注入(Unicode 安全,跨平台)----------
 // nut.js 的 keyboard.type() 模拟物理键位,打不出中文/emoji 等非 ASCII 字符(无对应键位)。
-// 解决:纯 ASCII 仍走 keyboard.type()(快、不动剪贴板);含非 ASCII → 写系统剪贴板 + 模拟 Cmd+V 粘贴,
-// 粘贴后再把旧剪贴板还原(尽力而为)。仅 macOS(pbcopy/pbpaste)。
-function pbcopy(text) {
-  return new Promise((resolve, reject) => {
-    const p = execFile('pbcopy', (err) => (err ? reject(err) : resolve()));
-    p.stdin.end(text, 'utf8');
-  });
+// 解决:纯 ASCII 仍走 keyboard.type()(快、不动剪贴板);含非 ASCII → 写系统剪贴板 + 模拟粘贴热键,
+// 粘贴后再把旧剪贴板还原(尽力而为)。
+// 平台差异:剪贴板命令 macOS=pbcopy/pbpaste、Windows=PowerShell Set/Get-Clipboard;
+//           粘贴热键 macOS=⌘V、Windows=Ctrl+V。
+const PLATFORM = process.platform;
+
+// 写系统剪贴板(UTF-8)
+function clipCopy(text) {
+  if (PLATFORM === 'darwin') {
+    return new Promise((resolve, reject) => {
+      const p = execFile('pbcopy', (err) => (err ? reject(err) : resolve()));
+      p.stdin.end(text, 'utf8');
+    });
+  }
+  if (PLATFORM === 'win32') {
+    // 经 stdin 喂给 PowerShell;先把输入编码设为 UTF-8 再 ReadToEnd,避免中文乱码
+    return new Promise((resolve, reject) => {
+      // -STA:剪贴板 OLE 需单线程套间;PowerShell 5.1 默认 STA,显式钉死以免 apartment 报错
+      const p = execFile('powershell', ['-NoProfile', '-NonInteractive', '-STA', '-Command',
+        '[Console]::InputEncoding=[System.Text.Encoding]::UTF8; Set-Clipboard -Value ([Console]::In.ReadToEnd())'],
+        (err) => (err ? reject(err) : resolve()));
+      p.stdin.end(text, 'utf8');
+    });
+  }
+  return Promise.reject(new Error(`中文输入暂不支持该平台: ${PLATFORM}(仅 macOS / Windows)`));
 }
-function pbpaste() {
-  return new Promise((resolve, reject) => {
-    execFile('pbpaste', { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 },
-      (err, out) => (err ? reject(err) : resolve(out)));
-  });
+
+// 读系统剪贴板(UTF-8);仅用于粘贴后还原,失败可忽略
+function clipPaste() {
+  if (PLATFORM === 'darwin') {
+    return new Promise((resolve, reject) => {
+      execFile('pbpaste', { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 },
+        (err, out) => (err ? reject(err) : resolve(out)));
+    });
+  }
+  if (PLATFORM === 'win32') {
+    return new Promise((resolve, reject) => {
+      execFile('powershell', ['-NoProfile', '-NonInteractive', '-STA', '-Command',
+        '[Console]::OutputEncoding=[System.Text.Encoding]::UTF8; $t=Get-Clipboard -Raw; if($null -ne $t){[Console]::Out.Write($t)}'],
+        { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 },
+        (err, out) => (err ? reject(err) : resolve(out)));
+    });
+  }
+  return Promise.reject(new Error(`unsupported platform: ${PLATFORM}`));
 }
+
+// 粘贴热键修饰键:macOS=⌘(Key.LeftSuper),Windows=Ctrl(Key.LeftControl)。
+// ⚠ macOS 经实测:darwin 原生二进制只认 "meta"(=Key.LeftSuper=⌘),不认 "cmd"(=Key.LeftCmd),勿改 LeftCmd。
+const PASTE_MODIFIER = (PLATFORM === 'darwin') ? Key.LeftSuper : Key.LeftControl;
+
 async function injectText(text) {
   // 纯 ASCII(含控制字符):物理按键直接打,跟手且不污染剪贴板
   if (/^[\x00-\x7F]*$/.test(text)) {
     await keyboard.type(text);
     return;
   }
-  // 含中文/emoji 等:剪贴板 + Cmd+V
+  // 含中文/emoji 等:剪贴板 + 粘贴热键
   let prev = null;
-  try { prev = await pbpaste(); } catch (e) { /* 读不到旧剪贴板就不还原 */ }
-  await pbcopy(text);
-  // ⚠ 经实测:darwin 原生二进制只认 "meta"(=Key.LeftSuper=⌘),不认 "cmd"(=Key.LeftCmd)。
-  // 勿"好心"改成 Key.LeftCmd,否则 ⌘ 按不下、粘贴失效。
-  await keyboard.pressKey(Key.LeftSuper);
+  try { prev = await clipPaste(); } catch (e) { /* 读不到旧剪贴板就不还原 */ }
+  await clipCopy(text);
+  await keyboard.pressKey(PASTE_MODIFIER);
   await keyboard.pressKey(Key.V);
   await keyboard.releaseKey(Key.V);
-  await keyboard.releaseKey(Key.LeftSuper);
+  await keyboard.releaseKey(PASTE_MODIFIER);
   // 还原旧剪贴板:延后到粘贴消费完之后(尽力而为,失败静默)
   if (prev !== null) {
-    setTimeout(() => { pbcopy(prev).catch(() => {}); }, 300);
+    setTimeout(() => { clipCopy(prev).catch(() => {}); }, 300);
   }
 }
 
