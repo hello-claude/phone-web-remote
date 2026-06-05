@@ -22,6 +22,8 @@ npm install
 npm start
 ```
 
+**Or one-click:** double-click `start.command` (macOS) or `start.bat` (Windows) in the project folder. It auto-runs `npm install` on first launch, then starts the server (no terminal commands to type).
+
 The terminal prints something like:
 
 ```
@@ -55,21 +57,22 @@ need to tick `node`). Then restart `npm start`.
 │ [/compact][/clear][cont.] │                              │
 │ [/review][yes y][no n]    │                              │
 ├───────────────────────────┤         Trackpad area        │
-│  [⌫][↑] [↵] [🎤]          │   slide = move · tap = left  │
-│  [←][↓][→]                │  two-finger tap = right ·    │
-│                           │  two-finger slide = scroll   │
-├───────────────────────────┤                              │
+│   [⌫]  [↑]  [↵]           │   slide = move · tap = left  │
+│   [←]  [↓]  [→]           │  two-finger tap = right ·    │
+├───────────────────────────┤  two-finger slide = scroll   │
 │ [text / voice input][send]│                              │
 └───────────────────────────┴──────────────────────────────┘
       Left: keyboard panel            Right: trackpad (right hand)
 ```
 
+The keypad mimics a keyboard/gamepad: arrows form a D-pad, with ⌫ (delete) and ↵ (enter) as colored action keys.
+
 - **Macro buttons**: tap to type the preset text into whatever field is focused on the Mac/PC. **Long-press a button**
   to edit its label and payload (saved to `config.json`, synced to every connected phone). Tapping an empty slot creates one.
 - **Arrow keys / ↵**: quickly pick options from Claude's prompts.
 - **⌫ Delete**: backspace (delete the character to the left).
-- **🎤 Voice**: tap to bring up the phone keyboard, then tap its microphone to dictate (iOS uses Siri dictation,
-  Android uses the IME's). The recognized text lands in the input bar; tap "send" to type it on the Mac/PC. You can also just type in the bar.
+- **Voice / text input**: tap the input bar to bring up the phone keyboard, then tap its microphone to dictate (iOS uses
+  Siri dictation, Android uses the IME's). The recognized text lands in the bar; tap "send" to type it on the Mac/PC. You can also just type.
 
 ## Default macro buttons
 

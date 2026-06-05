@@ -79,46 +79,46 @@
   }
   .macro {
     background: var(--btn); border: 0; border-radius: 10px; color: var(--text);
-    font-size: 14px; display: flex; align-items: center; justify-content: center;
+    font-size: 15px; min-height: 46px; display: flex; align-items: center; justify-content: center;
     text-align: center; padding: 4px; overflow: hidden; word-break: break-all;
+    transition: transform .05s ease, background .1s ease;
   }
-  .macro:active { background: var(--btn-active); }
+  .macro:active { background: var(--btn-active); transform: scale(0.96); }
 
-  /* 方向键 + 语音 */
-  #nav { display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: 1fr 1fr; gap: var(--gap); flex: 1; }
+  /* 方向/动作键:3 列(⌫ ↑ ↵ / ← ↓ →),箭头=D-pad 十字,⌫/↵=手柄式功能键 */
+  #nav { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--gap); flex: 1.3; }
   .key {
-    background: var(--btn); border: 0; border-radius: 10px; color: var(--text);
-    font-size: 20px; display: flex; align-items: center; justify-content: center;
+    background: var(--btn); border: 0; border-radius: 12px; color: var(--text);
+    font-size: 24px; min-height: 52px;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform .05s ease, background .1s ease;
   }
-  .key:active { background: var(--btn-active); }
-  .key.accent { background: #2c3a52; }
-  .key.accent:active { background: var(--accent); }
-  #kBack { grid-column: 1; grid-row: 1; }
-  #kUp { grid-column: 2; grid-row: 1; }
-  #kLeft { grid-column: 1; grid-row: 2; }
-  #kDown { grid-column: 2; grid-row: 2; }
-  #kRight { grid-column: 3; grid-row: 2; }
-  #kEnter { grid-column: 3; grid-row: 1; }
-  #kVoice { grid-column: 4; grid-row: 1 / span 2; font-size: 24px; }
+  .key:active { background: var(--btn-active); transform: scale(0.95); }
+  /* ↵ 确认键(蓝)/ ⌫ 删除键(红)— 像手柄上的彩色功能键,好辨认 */
+  .key-enter { background: #243a55; color: #cfe0ff; }
+  .key-enter:active { background: var(--accent); transform: scale(0.95); }
+  .key-del { background: #3a2630; color: #ffc9c9; }
+  .key-del:active { background: #6b3340; transform: scale(0.95); }
 
   /* 左键 / 右键 实体按钮 */
   #clicks { display: flex; gap: var(--gap); flex: 0.6; }
   .clickbtn {
     flex: 1; background: var(--btn); border: 0; border-radius: 10px; color: var(--text);
-    font-size: 17px; display: flex; align-items: center; justify-content: center;
+    font-size: 18px; min-height: 50px; display: flex; align-items: center; justify-content: center;
+    transition: transform .05s ease, background .1s ease;
   }
-  .clickbtn:active { background: var(--accent); }
+  .clickbtn:active { background: var(--accent); transform: scale(0.97); }
   .clickbtn.held { background: var(--accent); } /* 左键按住保持时高亮(拖拽中)*/
 
   /* 文字/语音输入栏 */
   #inputBar { display: flex; gap: var(--gap); }
   #textIn {
     flex: 1; background: var(--panel); border: 1px solid #333; border-radius: 10px;
-    color: var(--text); font-size: 16px; padding: 10px;
+    color: var(--text); font-size: 16px; padding: 10px; min-height: 46px;
   }
   #sendBtn {
     background: var(--accent); color: #fff; border: 0; border-radius: 10px;
-    padding: 0 18px; font-size: 15px;
+    padding: 0 18px; font-size: 16px; min-height: 46px;
   }
 
   /* 顶部错误提示 */
@@ -146,10 +146,9 @@
   <div id="panel">
     <div id="macros"></div>
     <div id="nav">
-      <button class="key" id="kBack" data-key="Backspace">⌫</button>
+      <button class="key key-del" id="kBack" data-key="Backspace">⌫</button>
       <button class="key" id="kUp" data-key="Up">↑</button>
-      <button class="key accent" id="kEnter" data-key="Enter">↵</button>
-      <button class="key" id="kVoice">🎤</button>
+      <button class="key key-enter" id="kEnter" data-key="Enter">↵</button>
       <button class="key" id="kLeft" data-key="Left">←</button>
       <button class="key" id="kDown" data-key="Down">↓</button>
       <button class="key" id="kRight" data-key="Right">→</button>
@@ -159,7 +158,7 @@
       <button class="clickbtn" id="btnRight">右键</button>
     </div>
     <div id="inputBar">
-      <input id="textIn" type="text" placeholder="点🎤说话或在此打字…" autocomplete="off" autocorrect="off" autocapitalize="off">
+      <input id="textIn" type="text" placeholder="点此说话或打字…" autocomplete="off" autocorrect="off" autocapitalize="off">
       <button id="sendBtn">发送</button>
     </div>
   </div>
@@ -324,12 +323,8 @@
     btn.addEventListener('touchcancel', release); // 手指滑出/被打断也确保抬起,避免左键卡住
   })();
 
-  // ---------- 语音 / 文字输入 ----------
+  // ---------- 文字输入(点输入栏即唤起手机键盘,键盘上的麦克风可听写)----------
   var textIn = document.getElementById('textIn');
-  document.getElementById('kVoice').addEventListener('touchstart', function (e) {
-    e.preventDefault();
-    textIn.focus(); // 唤起手机键盘,用户点键盘上的麦克风听写
-  }, { passive: false });
 
   function sendText() {
     var t = textIn.value;
