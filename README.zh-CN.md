@@ -5,6 +5,20 @@
 
 > **语言:** [English](README.md) | 中文
 
+<p>
+  <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-2ea44f">
+  <img alt="Server" src="https://img.shields.io/badge/server-macOS_Windows-4c8bf5">
+  <img alt="Node.js" src="https://img.shields.io/badge/Node.js-server-417e38">
+  <img alt="No app on phone" src="https://img.shields.io/badge/phone-no_app_needed-d98e5c">
+</p>
+
+**亮点**
+- 📱 手机浏览器就是遥控器 — **免装 App**。
+- 🖱️ 触控板 + 宏按钮 + 方向键 D-pad + ⌫/↵ + 语音/文字,横屏一页搞定。
+- 🌐 纯 WiFi 局域网;服务端 **macOS 或 Windows** 都能跑。
+- 🀄 中文 / emoji 也能打(剪贴板粘贴注入)。
+- 🚀 一键启动:双击 `start.command`(macOS)/ `start.bat`(Windows)。
+
 ## 安装
 
 ```bash
