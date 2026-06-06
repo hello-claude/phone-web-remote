@@ -5,6 +5,20 @@ Runs over **Wi-Fi LAN** (not Bluetooth), works on iOS / Android, **nothing to in
 
 > **Languages:** English | [中文](README.zh-CN.md)
 
+<p>
+  <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-2ea44f">
+  <img alt="Server" src="https://img.shields.io/badge/server-macOS_Windows-4c8bf5">
+  <img alt="Node.js" src="https://img.shields.io/badge/Node.js-server-417e38">
+  <img alt="No app on phone" src="https://img.shields.io/badge/phone-no_app_needed-d98e5c">
+</p>
+
+**Highlights**
+- 📱 Your phone's browser *is* the remote — **no app to install**.
+- 🖱️ Trackpad + macro keys + D-pad + ⌫/↵ + voice/text, one landscape page.
+- 🌐 Plain Wi-Fi LAN; server runs on **macOS or Windows**.
+- 🀄 Types Chinese / emoji too (clipboard-paste injection).
+- 🚀 One-click launch: double-click `start.command` (macOS) / `start.bat` (Windows).
+
 ## Install
 
 ```bash
